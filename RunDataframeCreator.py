@@ -25,6 +25,12 @@ def MakePickles(rootfilename):
     brancharr = []
     df = pd.DataFrame()
     dfc = pd.DataFrame()
+    # dfu = pd.DataFrame()
+
+    udf = pd.DataFrame()
+    ddf = pd.DataFrame()
+    rdf = pd.DataFrame()
+    ldf = pd.DataFrame()
 
     # First, make an array of tree branch names like "b001_adc08..."
     chanlast = 0
@@ -152,7 +158,7 @@ def MakePickles(rootfilename):
     for det in range(4):
         for strip in range(16):
             edgecf = poscal[det][strip][0]
-            edgecl = poscal[det][strip][0]
+            edgecl = poscal[det][strip][1]
 
             # We need this try except here because one of the strips wasn't working and the edges are 0...
             try:
@@ -167,24 +173,68 @@ def MakePickles(rootfilename):
     with open('Ecal.pkl', 'rb') as f:
         ecal = pickle.load(f)
 
+    # Actually, might be best to split the data frames up even further than before. Create a file for each run for each
+    # detector instead!:
+
     for det in range(4):
         if det < 2:
             numstrips = 16
         if det > 1:
             numstrips = 1
         for strip in range(numstrips):
-            dfc[edetnames[det] + "_" + str(strip) + "_E"] = ecal[det][strip] * df[edetnames[det] + "_" + str(strip)]
+            if det == 0:
+                udf[edetnames[det] + "_" + str(strip) + "_E"] = ecal[det][strip] * df[edetnames[det] + "_" + str(strip)]
+            elif det == 1:
+                ddf[edetnames[det] + "_" + str(strip) + "_E"] = ecal[det][strip] * df[edetnames[det] + "_" + str(strip)]
+            elif det == 2:
+                rdf[edetnames[det] + "_" + str(strip) + "_E"] = ecal[det][strip] * df[edetnames[det] + "_" + str(strip)]
+            elif det == 3:
+                ldf[edetnames[det] + "_" + str(strip) + "_E"] = ecal[det][strip] * df[edetnames[det] + "_" + str(strip)]
+
+            #dfc[edetnames[det] + "_" + str(strip) + "_E"] = ecal[det][strip] * df[edetnames[det] + "_" + str(strip)]
+            #dfu[edetnames[det] + "_" + str(strip)] = df[edetnames[det] + "_" + str(strip)]
+
+    # For the dE detector we need to
+
+    for det in range(4):
+        for strip in range(16):
+            if det == 0:
+                udf[detnames[det] + "_" + str(strip) + "_E"] = dfc[detnames[det] + "_" + str(strip) + "_E"]
+                udf[detnames[det] + "_" + str(strip) + "_pos"] = dfc[detnames[det] + "_" + str(strip) + "_pos"]
+            elif det == 1:
+                ddf[detnames[det] + "_" + str(strip) + "_E"] = dfc[detnames[det] + "_" + str(strip) + "_E"]
+                ddf[detnames[det] + "_" + str(strip) + "_pos"] = dfc[detnames[det] + "_" + str(strip) + "_pos"]
+            elif det == 2:
+                rdf[detnames[det] + "_" + str(strip) + "_E"] = dfc[detnames[det] + "_" + str(strip) + "_E"]
+                rdf[detnames[det] + "_" + str(strip) + "_pos"] = dfc[detnames[det] + "_" + str(strip) + "_pos"]
+            elif det == 3:
+                ldf[detnames[det] + "_" + str(strip) + "_E"] = dfc[detnames[det] + "_" + str(strip) + "_E"]
+                ldf[detnames[det] + "_" + str(strip) + "_pos"] = dfc[detnames[det] + "_" + str(strip) + "_pos"]
+
+            #dfu[detnames[det] + "_" + str(strip)] = df[detnames[det] + "_" + str(strip)]
+
+    udf = udf.fillna(0)
+    rdf = rdf.fillna(0)
+    ldf = ldf.fillna(0)
+    ddf = ddf.fillna(0)
+
 
     # Now, the final step is to make our run pickle files so we can open these dataframes later.
 
     #dfc.to_pickle("../runpickles/run" + rootfilename[-7:-5] + ".pkl")
     #dfc.to_hdf("../runpickles/run" + rootfilename[-7:-5] + ".h5", key='dfc', mode='w')
-    dfc.to_parquet("../runpickles/run" + rootfilename[-7:-5] + ".parquet.gzip", compression='gzip')
-    print("run" + rootfilename[-7:-5] + ".pkl was generated!")
+    #dfu.to_parquet("../runzips/urun" + rootfilename[-7:-5] + ".parquet.gzip", compression='gzip')
+
+    udf.to_parquet("../runzips/run" + rootfilename[-7:-5] + "_detU.parquet.gzip", compression='gzip')
+    ddf.to_parquet("../runzips/run" + rootfilename[-7:-5] + "_detD.parquet.gzip", compression='gzip')
+    rdf.to_parquet("../runzips/run" + rootfilename[-7:-5] + "_detR.parquet.gzip", compression='gzip')
+    ldf.to_parquet("../runzips/run" + rootfilename[-7:-5] + "_detL.parquet.gzip", compression='gzip')
+
+    print("run " + rootfilename[-7:-5] + " gzips were generated!")
 
 
 if __name__ == "__main__":
-    print("Making pickle files from ROOT!")
+    print("Making data frames from ROOT!")
 
     # First, get the list of root file names:
     rootdir = "../rootfiles/"
