@@ -90,8 +90,65 @@ def makeevts(numevts, beamenum, telepos, tgtthk):
     # Now that the initial reaction is simulated, we can start simulating the decays:
     # first is the breakup of 12C into an alpha (4) and 8Be (5)
 
-    a1theta = np.random.rand(numevents) * np.pi
-    betheta = np.pi - a1theta
+    betheta = np.random.rand(numevents) * np.pi
+    bephi = np.random.rand(numevents) * 2 * np.pi
+    betheta_tot = ctheta + betheta
+    bephi_tot = cphi + bephi
+
+    betheta_tot = np.where(betheta_tot > np.pi, 2*np.pi - betheta_tot, betheta_tot)
+    bephi_tot = np.where(bephi_tot > (2 * np.pi), bephi_tot - 2 * np.pi, bephi_tot)
+
+    a1theta_tot = np.pi - betheta_tot
+    a1phi_tot = bephi_tot + np.pi
+
+    a1phi_tot = np.where(a1phi_tot > (2 * np.pi), a1phi_tot - 2 * np.pi, a1phi_tot)
+
+    # Now, with the angles defined we can figure out the energies of these particles using conservation of momentum:
+    p3x = p3 * np.sin(ctheta) * np.cos(cphi)
+    p3y = p3 * np.sin(ctheta) * np.sin(cphi)
+    p3z = p3 * np.cos(ctheta)
+
+    Ecmdec1 = exenergy + qdec1
+    mred1 = mass[4] * mass[5] / (mass[4] + mass[5])
+    pdec1 = np.sqrt(2 * mred1 * Ecmdec1)
+
+    pbex = pdec1 * np.sin(betheta_tot) * np.cos(bephi_tot) + mass[4] / mass[3] * p3x
+    pbey = pdec1 * np.sin(betheta_tot) * np.sin(bephi_tot) + mass[4] / mass[3] * p3y
+    pbez = pdec1 * np.cos(betheta_tot) + mass[4] / mass[3] * p3z
+
+    pa1x = pdec1 * np.sin(a1theta_tot) * np.cos(a1phi_tot) + mass[5] / mass[3] * p3x
+    pa1y = pdec1 * np.sin(a1theta_tot) * np.sin(a1phi_tot) + mass[5] / mass[3] * p3y
+    pa1z = pdec1 * np.cos(a1theta_tot) + mass[5] / mass[3] * p3z
+
+    ea1 = (pa1x**2 + pa1y**2 + pa1z**2) / (2 * mass[4])
+
+    # Now, the Be has a chance to decay:
+    a2theta = np.random.rand(numevents) * np.pi
+    a2phi = np.random.rand(numevents) * 2 * np.pi
+
+    a2theta_tot = a2theta + betheta_tot
+    a2theta_tot = np.where(a2theta_tot > np.pi, 2*np.pi - a2theta_tot, a2theta_tot)
+
+    a2phi_tot = bephi_tot + a2phi
+    a2phi_tot = np.where(a2phi_tot > (2 * np.pi), a2phi_tot - np.pi * 2, a2phi_tot)
+
+    a3theta_tot = np.pi - a2theta_tot
+    a3phi_tot = a2phi_tot + np.pi
+
+    a3phi_tot = np.where(a3phi_tot > (2 * np.pi), a3phi_tot - 2 * np.pi, a3phi_tot)
+
+    Ecmdec2 = qdec2
+
+    mred2 = mass[4] * mass[4] / (mass[4] + mass[4])
+    pdec2 = np.sqrt(2 * mred2 * Ecmdec2)
+
+    pa2x = pdec2 * np.sin(a2theta_tot) * np.cos(a2phi_tot) + mass[4]/mass[5] * pbex
+    pa2y = pdec2 * np.sin(a2theta_tot) * np.sin(a2phi_tot) + mass[4]/mass[5] * pbey
+    pa2z = pdec2 * np.cos(a2theta_tot) + mass[4] / mass[5] * pbez
+
+    pa3x = pdec2 * np.sin(a3theta_tot) * np.cos(a3phi_tot) + mass[4]/mass[5] * pbex
+    pa3y = pdec2 * np.sin(a3theta_tot) * np.sin(a3phi_tot) + mass[4]/mass[5] * pbey
+    pa3z = pdec2 * np.cos(a3theta_tot) + mass[4] / mass[5] * pbez
 
 
 if __name__=="__main__":
