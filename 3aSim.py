@@ -196,10 +196,10 @@ def makeevts(numevts, beamenum, telepos, tgtthk):
     dfout = desorb(zalpha, aalpha, ea1, zt, at, num, gas, density, thka1, 0, 0, ea1)
     ea1 = ea1 - dfout['DeltaE_tot'].to_numpy()
 
-    dfout = desorb(zalpha, aalpha, ea2, zt, at, num, gas, density, thka2, 0, 0, ea1)
+    dfout = desorb(zalpha, aalpha, ea2, zt, at, num, gas, density, thka2, 0, 0, ea2)
     ea2 = ea2 - dfout['DeltaE_tot'].to_numpy()
 
-    dfout = desorb(zalpha, aalpha, ea3, zt, at, num, gas, density, thka3, 0, 0, ea1)
+    dfout = desorb(zalpha, aalpha, ea3, zt, at, num, gas, density, thka3, 0, 0, ea3)
     ea3 = ea3 - dfout['DeltaE_tot'].to_numpy()
 
     # Now, we need to figure out the detector positions and where all of these particles will be detected.
@@ -279,7 +279,7 @@ def makeevts(numevts, beamenum, telepos, tgtthk):
 
     for i in range(4):
         for j in range(16):
-            # if U/D the
+            # if U/D the strips are vertical, R/L the strips are horizonatal
             if i < 2:
                 stripx1 = detx1[i] + j * 5/16
                 stripx2 = stripx1 + 5/16
@@ -294,17 +294,52 @@ def makeevts(numevts, beamenum, telepos, tgtthk):
                 stripy2 = stripy1 + 5/16
 
             # Now we can use np.where to assign what strip was hit.
-            stripmaska1 = (xa1 > stripx1) & (xa1 < stripx2) & (ya1 > stripy1) & (ya1 < stripy2) & (df["Det Name a1"] == i)
-            stripmaska2 = (xa2 > stripx1) & (xa2 < stripx2) & (ya2 > stripy1) & (ya2 < stripy2) & (df["Det Name a2"] == i)
-            stripmaska3 = (xa3 > stripx1) & (xa3 < stripx2) & (ya3 > stripy1) & (ya3 < stripy2) & (df["Det Name a3"] == i)
+            stripmaska1 = (xa1 > stripx1) & (xa1 < stripx2) & (ya1 > stripy1) & (ya1 < stripy2) & \
+                          (df["Det Name a1"] == i)
+            stripmaska2 = (xa2 > stripx1) & (xa2 < stripx2) & (ya2 > stripy1) & (ya2 < stripy2) & \
+                          (df["Det Name a2"] == i)
+            stripmaska3 = (xa3 > stripx1) & (xa3 < stripx2) & (ya3 > stripy1) & (ya3 < stripy2) & \
+                          (df["Det Name a3"] == i)
 
             df["Strip a1"] = np.where(stripmaska1, j, df["Strip a1"])
             df["Strip a2"] = np.where(stripmaska2, j, df["Strip a2"])
             df["Strip a3"] = np.where(stripmaska3, j, df["Strip a3"])
 
-    print(df[(detectedmask1 & detectedmask2) | (detectedmask1 & detectedmask3) | (detectedmask2 & detectedmask3)])
+    #print(df[(detectedmask1 & detectedmask2) | (detectedmask1 & detectedmask3) | (detectedmask2 & detectedmask3)])
 
-    print(df)
+    # Now need to figure out how much energy is deposited in the dE and E by alpha 1
+    # D = 64 um, U = 62 um, R = 140 um, L = 145 um
+
+    # Need to figure out the thickness of the detector that the particles actually go through: thickness / cos(theta)
+
+
+    # Initialize these DataFrame Columns here, a2 and a3 won't have enough energy to get through the dE if
+    # they're detected.
+    detthk = [62, 64, 145, 140]
+
+    df["dE1"] = np.zeros(numevts)
+    df["E1"] = np.zeros(numevts)
+
+    zdet = [14]
+    adet = [28]
+    numdet = [1]
+    densitydet = 2.329
+    gasdet = False
+
+    for i in range(4):
+        detmask = df["Det Name a1"] == i
+
+        dethk = detthk[i] * densitydet * 0.1 / np.cos(df["A1 Theta"][detmask])
+
+        dfout = desorb(zalpha[detmask], aalpha[detmask], df["Alpha 1 Energy"][detmask].to_numpy(), zdet, adet,
+                       numdet, gasdet, densitydet, dethk, 0, 0, ea1)
+
+        df["dE1"][detmask] = dfout['DeltaE_tot'].to_numpy()
+        df["E1"][detmask] = df["Alpha 1 Energy"][detmask] - df["dE1"][detmask]
+
+    print(df[detectedmask1])
+    #print(df)
+
 
 if __name__=="__main__":
 
